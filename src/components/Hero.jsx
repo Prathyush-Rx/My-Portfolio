@@ -62,7 +62,10 @@ export default function Hero() {
       <div className="hero-image-wrap">
         <div className="hero-img-frame">
           <div className="hero-img-inner">
-            <img src="/profile.jpg" alt="A. Prathyush" />
+           <img
+  src={`${import.meta.env.BASE_URL}profile.jpg`}
+  alt="A. Prathyush"
+/>
           </div>
           <div className="hero-available">
             <div className="pulse-dot"></div>
