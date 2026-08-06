@@ -17,7 +17,7 @@ export default function Resume() {
 </p>
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 14 }}>
           <a
-            href={`${import.meta.env.BASE_URL}resume/A_PRATHYUSH_Resume.pdf`}
+            href={`${import.meta.env.BASE_URL}resume/A_PRATHYUSH_Resume.pdf?v=2`}
             className="btn-primary"
             target="_blank"
             rel="noopener noreferrer"
@@ -29,7 +29,7 @@ export default function Resume() {
             View Resume
           </a>
           <a
-           href={`${import.meta.env.BASE_URL}resume/A_PRATHYUSH_Resume.pdf`}
+           href={`${import.meta.env.BASE_URL}resume/A_PRATHYUSH_Resume.pdf?v=2`}
             className="btn-outline"
             download
             style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
