@@ -10,9 +10,13 @@ permissions:
   pages: write
   id-token: write
 
+# Allow only one concurrent deployment. Do NOT cancel in-progress runs:
+# cancelling a Pages deploy can leave a stuck lock on the github-pages
+# environment that makes every later deploy hang until "Timeout reached,
+# aborting!".
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -26,6 +30,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Install dependencies
         run: npm ci
@@ -43,8 +50,28 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment1.outputs.page_url || steps.deployment2.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      # deploy-pages intermittently times out because GitHub's Pages backend
+      # gets stuck in "queued"/"in_progress" (transient, not a project issue).
+      # Retry once to ride out the transient failure.
+      - name: Deploy to GitHub Pages (attempt 1)
+        id: deployment1
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Wait before retrying a transient timeout
+        if: steps.deployment1.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages (attempt 2)
+        id: deployment2
+        if: steps.deployment1.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Fail if both deploy attempts timed out
+        if: steps.deployment1.outcome == 'failure' && steps.deployment2.outcome == 'failure'
+        run: |
+          echo "::error::GitHub Pages deploy timed out on both attempts. This is a known transient GitHub backend issue. Re-run the workflow; if it keeps failing, delete stuck deployments under Settings -> Environments -> github-pages -> Deployment history."
+          exit 1
