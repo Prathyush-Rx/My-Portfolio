@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   pages: write
+  deployments: write
   id-token: write
 
 # Allow only one concurrent deployment. Do NOT cancel in-progress runs:
@@ -52,6 +53,25 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment1.outputs.page_url || steps.deployment2.outputs.page_url }}
     steps:
+      # A deploy that timed out or was interrupted can leave its deployment
+      # stuck "in_progress"/"queued" on GitHub's side, holding the one-at-a-time
+      # github-pages environment lock so every later deploy hangs. Cancel any
+      # stale deployments before trying again.
+      - name: Cancel stale in-progress Pages deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ids=$(gh api "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=100" --jq '.[].id' 2>/dev/null || true)
+          for id in ${ids}; do
+            state=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" --jq '.[0].state // empty' 2>/dev/null || true)
+            case "${state}" in
+              queued|in_progress|pending|waiting)
+                echo "Cancelling stale deployment ${id} (${state})"
+                gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${id}/cancel" || echo "Could not cancel ${id}"
+                ;;
+            esac
+          done
+
       # deploy-pages intermittently times out because GitHub's Pages backend
       # gets stuck in "queued"/"in_progress" (transient, not a project issue).
       # Retry once to ride out the transient failure.
